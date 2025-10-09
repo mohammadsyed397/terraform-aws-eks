@@ -2,7 +2,7 @@ module "ingress_alb" {
   source = "terraform-aws-modules/alb/aws"
   version = "9.16.0"
   internal = false
-  name    = "${var.project}-${var.environment}-frontend-alb" #roboshop-dev-frontend-alb
+  name    = "${var.project}-${var.environment}-ingress-alb" #roboshop-dev-ingress-alb
   vpc_id  = local.vpc_id
   subnets = local.public_subnet_ids
   create_security_group = false
@@ -11,12 +11,12 @@ module "ingress_alb" {
   tags = merge(
     local.common_tags,
     {
-        Name = "${var.project}-${var.environment}-frontend-alb"
+        Name = "${var.project}-${var.environment}-ingress-alb"
     }
   )
 }
-resource "aws_lb_listener" "frontend_alb" {
-  load_balancer_arn = module.frontend_alb.arn
+resource "aws_lb_listener" "ingress_alb" {
+  load_balancer_arn = module.ingress_alb.arn
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy = "ELBSecurityPolicy-2016-08"
@@ -37,8 +37,8 @@ resource "aws_route53_record" "forntend_alb" {
   type = "A"
   name = var.zone_name
   alias {
-      name                   = module.frontend_alb.dns_name
-    zone_id                = module.frontend_alb.zone_id # This is the ZONE ID of ALB
+      name                   = module.ingress_alb.dns_name
+    zone_id                = module.ingress_alb.zone_id # This is the ZONE ID of ALB
     evaluate_target_health = true 
   }
   allow_overwrite = true
