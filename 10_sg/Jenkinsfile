@@ -63,7 +63,40 @@ pipeline {
                     }
                 }
             }
-        }    
+        }
+        stage('Bastion','ACM','EKS') {
+            parllel {
+                stage('trigger Bastion') {
+                    steps {
+                        script {
+                            build Job: '20_bastion'
+                            propagate: false
+                            wait: true
+
+                        }
+                    }
+                }
+                stage ('Triger EKS') {
+                    steps{
+                        script{
+                            build Job: '80_eks'
+                            propagate: false
+                            wait: false
+                        }
+                    }
+                }
+                stage('triger acm'){
+                    steps{
+                        script{
+                            build Job: '60-acm'
+                            propagate: false
+                            wait: false
+                            
+                        }
+                    }
+                }
+            }
+        }   
     }
 
     post { 
