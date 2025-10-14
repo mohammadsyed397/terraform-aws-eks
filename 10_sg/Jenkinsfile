@@ -1,6 +1,7 @@
+
 pipeline {
     agent  {
-        label 'agent-1'
+        label 'AGENT-1'
     }
     environment { 
         appVersion = ''
@@ -25,9 +26,9 @@ pipeline {
         stage('init') {
             steps {
                 script {
-                    withAWS(credentials: 'aws-cred', region: 'us-east-1') {
+                    withAWS(credentials: 'aws-creds', region: 'us-east-1') {
                         sh """
-                            cd 10_sg
+                            cd 10-sg
                             terraform init -reconfigure
                         """
                     }
@@ -38,9 +39,9 @@ pipeline {
         stage('plan') {
             steps {
                 script {
-                    withAWS(credentials: 'aws-cred', region: 'us-east-1') {
+                    withAWS(credentials: 'aws-creds', region: 'us-east-1') {
                         sh """
-                            cd 10_sg
+                            cd 10-sg
                             terraform plan
                         """
                     }
@@ -48,55 +49,59 @@ pipeline {
             }
         }
         stage('apply') {
-            input {
-                message "Should we continue?"
-                ok "Yes, we should."
-                submitter "alice,bob"
-            }
             steps {
                 script {
-                    withAWS(credentials: 'aws-cred', region: 'us-east-1') {
+                    withAWS(credentials: 'aws-creds', region: 'us-east-1') {
                         sh """
-                            cd 10_sg
+                            cd 10-sg
                             terraform apply -auto-approve
                         """
                     }
                 }
             }
         }
-        stage('Bastion','ACM','EKS') {
-            parllel {
-                stage('trigger Bastion') {
+        stage('Bastion EKS ACM ALB') {
+            parallel {
+                stage('Trigger Bastion') {
                     steps {
                         script {
-                            build Job: '20_bastion'
-                            propagate: false
-                            wait: true
-
+                            build job: '20-bastion', 
+                            propagate: false,  // even SG fails VPC will not be effected
+                            wait: false // VPC will not wait for SG pipeline completion
                         }
                     }
                 }
-                stage ('Triger EKS') {
-                    steps{
-                        script{
-                            build Job: '80_eks'
-                            propagate: false
-                            wait: false
+                stage('Trigger EKS') {
+                    steps {
+                        script {
+                            build job: '80-eks', 
+                            propagate: false,  // even SG fails VPC will not be effected
+                            wait: false // VPC will not wait for SG pipeline completion
                         }
                     }
                 }
-                stage('triger acm'){
-                    steps{
-                        script{
-                            build Job: '60-acm'
-                            propagate: false
-                            wait: false
-                            
+                stage('ACM') {
+                    steps {
+                        script {
+                            build job: '60-acm', 
+                            propagate: false,  // even SG fails VPC will not be effected
+                            wait: false // VPC will not wait for SG pipeline completion
                         }
-                    }
+                    }  
                 }
             }
-        }   
+        }
+        stage('Trigger ALB') {
+            steps {
+                script {
+                    build job: '70-frontend-alb', 
+                    propagate: false,  // even SG fails VPC will not be effected
+                    wait: false // VPC will not wait for SG pipeline completion
+                }
+            }
+        }
+
+        
     }
 
     post { 
