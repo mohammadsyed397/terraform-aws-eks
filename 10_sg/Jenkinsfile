@@ -89,6 +89,26 @@ pipeline {
                         }
                     }  
                 }
+                stage('ECR'){
+                    steps{
+                        script{
+                            build job: '30_ecr', 
+                            propagate: false,  // even SG fails VPC will not be effected
+                            wait: false // VPC will not wait for SG pipeline completion
+
+                        }
+                    }
+                }
+                stage('iam'){
+                    steps{
+                        script{
+                            build job: '40_iam', 
+                            propagate: false,  // even SG fails VPC will not be effected
+                            wait: false // VPC will not wait for SG pipeline completion
+                        }
+                    }
+                }
+
             }
         }
         stage('Trigger ALB') {
